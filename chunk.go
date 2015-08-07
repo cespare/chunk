@@ -38,21 +38,17 @@ where OPTIONS are:
 
 	switch {
 	case *end == 0 && *lenf == 0:
-		fmt.Println("One of -end, -len must be given.")
+		Fatalln("One of -end, -len must be given.")
 	case *end != 0 && *lenf != 0:
-		fmt.Println("Only one of -end, -len may be given.")
+		Fatalln("Only one of -end, -len may be given.")
 	case *end < 0:
-		fmt.Println("-end cannot be negative.")
+		Fatalln("-end cannot be negative.")
 	case *end < 0:
-		fmt.Println("-end cannot be negative.")
+		Fatalln("-end cannot be negative.")
 	case *end > 0 && *end <= off:
-		fmt.Println("-end must be greater than the offset.")
-	default:
-		goto after
+		Fatalln("-end must be greater than the offset.")
 	}
-	os.Exit(1)
 
-after:
 	n := *lenf
 	if n == 0 {
 		n = *end - off
@@ -61,4 +57,9 @@ after:
 		fmt.Printf("Error while reading chunk: %s\n", err)
 		os.Exit(1)
 	}
+}
+
+func Fatalln(args ...interface{}) {
+	fmt.Println(args...)
+	os.Exit(1)
 }
