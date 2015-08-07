@@ -17,8 +17,8 @@ func main() {
 		end  Int64
 		lenf Int64
 	)
-	flag.Var(&end, "end", "Ending offset")
-	flag.Var(&lenf, "len", "Length of chunk")
+	flag.Var(&end, "end", "Chunk end `offset`")
+	flag.Var(&lenf, "len", "Chunk `length`")
 	flag.Usage = func() {
 		fmt.Printf(`Usage: %s [OPTIONS] FILENAME OFFSET
 where OPTIONS are:

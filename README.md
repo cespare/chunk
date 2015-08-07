@@ -11,12 +11,15 @@ You'd think that `dd` would be the right tool, but unfortunately it makes this t
 ## Usage
 
 ```
-$ chunk -h
-Usage: chunk [OPTIONS] FILENAME OFFSET
+chunk -h
+Usage: ./chunk [OPTIONS] FILENAME OFFSET
 where OPTIONS are:
-  -end=0: Ending offset
-  -len=0: Length of chunk
-(Exactly one of -end, -len must be given.)
+  -end value
+        Ending offset
+  -len value
+        Length of chunk
+Exactly one of -end, -len must be given.
+Numbers may be written as 1000, 1e3, or 1kB.
 ```
 
 ## Example
