@@ -8,15 +8,6 @@ import (
 	"strconv"
 )
 
-func copyChunk(w io.Writer, r io.ReadSeeker, off, n int64) error {
-	_, err := r.Seek(off, os.SEEK_SET)
-	if err != nil {
-		return err
-	}
-	_, err = io.CopyN(w, r, n)
-	return err
-}
-
 func main() {
 	end := flag.Int64("end", 0, "Ending offset")
 	lenf := flag.Int64("len", 0, "Length of chunk")
@@ -66,7 +57,7 @@ after:
 	if n == 0 {
 		n = *end - off
 	}
-	if err := copyChunk(os.Stdout, f, off, n); err != nil {
+	if _, err := io.Copy(os.Stdout, io.NewSectionReader(f, off, n)); err != nil {
 		fmt.Printf("Error while reading chunk: %s\n", err)
 		os.Exit(1)
 	}
