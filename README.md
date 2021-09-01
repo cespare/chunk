@@ -8,7 +8,7 @@ task quite difficult.
 
 ## Installation
 
-    go get github.com/cespare/chunk
+    go install github.com/cespare/chunk@latest
 
 ## Usage
 
