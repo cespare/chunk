@@ -1,8 +1,10 @@
 # chunk
 
-Chunk is a tiny utility for grabbing an arbitrary chunk from a file, given an offset and length.
+Chunk is a tiny utility for grabbing an arbitrary chunk from a file, given an
+offset and length.
 
-You'd think that `dd` would be the right tool, but unfortunately it makes this task quite difficult.
+You'd think that `dd` would be the right tool, but unfortunately it makes this
+task quite difficult.
 
 ## Installation
 
