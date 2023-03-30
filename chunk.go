@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"os"
 	"strconv"
@@ -12,13 +13,24 @@ import (
 )
 
 func main() {
+	log.SetFlags(0)
 	var (
-		off  Int64
-		end  Int64
-		lenf Int64
+		off  int64
+		end  int64
+		lenf int64
 	)
-	flag.Var(&end, "end", "Chunk end `offset`")
-	flag.Var(&lenf, "len", "Chunk `length`")
+	parseFunc := func(p *int64) func(string) error {
+		return func(s string) error {
+			n, err := parseNumber(s)
+			if err != nil {
+				return err
+			}
+			*p = n
+			return nil
+		}
+	}
+	flag.Func("end", "Chunk end `offset`", parseFunc(&end))
+	flag.Func("len", "Chunk `length`", parseFunc(&lenf))
 	flag.Usage = func() {
 		fmt.Printf(`Usage: %s [OPTIONS] FILENAME OFFSET
 where OPTIONS are:
@@ -39,21 +51,21 @@ Numbers may be written as 1000, 1e3, or 1kB.`)
 		os.Exit(1)
 	}
 	defer f.Close()
-	if err := off.Set(flag.Arg(1)); err != nil {
-		Fatalf("Error with offset: %s\n", err)
+	if err := parseFunc(&off)(flag.Arg(1)); err != nil {
+		log.Fatalf("Error with offset: %s\n", err)
 	}
 
 	switch {
 	case end == 0 && lenf == 0:
-		Fatalln("One of -end, -len must be given.")
+		log.Fatal("One of -end, -len must be given")
 	case end != 0 && lenf != 0:
-		Fatalln("Only one of -end, -len may be given.")
+		log.Fatal("Only one of -end, -len may be given")
 	case end < 0:
-		Fatalln("-end cannot be negative.")
+		log.Fatal("-end cannot be negative")
 	case end < 0:
-		Fatalln("-end cannot be negative.")
+		log.Fatal("-end cannot be negative")
 	case end > 0 && end <= off:
-		Fatalln("-end must be greater than the offset.")
+		log.Fatal("-end must be greater than the offset")
 	}
 
 	n := lenf
@@ -67,37 +79,18 @@ Numbers may be written as 1000, 1e3, or 1kB.`)
 	}
 }
 
-type Int64 int64
-
-func (n *Int64) String() string { return fmt.Sprintf("%d", *n) }
-func (n *Int64) Set(s string) error {
-	nn, err := strconv.ParseInt(s, 10, 64)
-	if err == nil {
-		*n = Int64(nn)
-		return nil
+func parseNumber(s string) (int64, error) {
+	if n, err := strconv.ParseInt(s, 10, 64); err == nil {
+		return n, nil
 	}
-	f, err := strconv.ParseFloat(s, 64)
-	if err == nil {
+	if f, err := strconv.ParseFloat(s, 64); err == nil {
 		if f > float64(math.MaxInt64) {
-			return fmt.Errorf("float value too large for float64: %g", f)
+			return 0, fmt.Errorf("float value too large for int64: %g", f)
 		}
-		*n = Int64(f)
-		return nil
+		return int64(f), nil
 	}
-	u, err := humanize.ParseBytes(s)
-	if err == nil {
-		*n = Int64(u)
-		return nil
+	if u, err := humanize.ParseBytes(s); err == nil {
+		return int64(u), nil
 	}
-	return fmt.Errorf("cannot parse %q", s)
-}
-
-func Fatalf(format string, args ...interface{}) {
-	fmt.Printf(format, args...)
-	os.Exit(1)
-}
-
-func Fatalln(args ...interface{}) {
-	fmt.Println(args...)
-	os.Exit(1)
+	return 0, fmt.Errorf("cannot parse %q", s)
 }
