@@ -8,6 +8,7 @@ import (
 	"math"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/dustin/go-humanize"
 )
@@ -108,13 +109,18 @@ func parseNumber(s string) (int64, error) {
 		return n, nil
 	}
 	if f, err := strconv.ParseFloat(s, 64); err == nil {
-		if f > float64(math.MaxInt64) {
-			return 0, fmt.Errorf("float value too large for int64: %g", f)
+		if f > float64(math.MaxInt64) || f < float64(math.MinInt64) {
+			return 0, fmt.Errorf("float value out of bounds for int64: %g", f)
 		}
 		return int64(f), nil
 	}
+	s, neg := strings.CutPrefix(s, "-")
 	if u, err := humanize.ParseBytes(s); err == nil {
-		return int64(u), nil
+		n := int64(u)
+		if neg {
+			n = -n
+		}
+		return n, nil
 	}
 	return 0, fmt.Errorf("cannot parse %q", s)
 }
