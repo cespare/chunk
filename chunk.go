@@ -15,9 +15,9 @@ import (
 func main() {
 	log.SetFlags(0)
 	var (
-		off  int64
-		end  int64
-		lenf int64
+		start int64
+		end   int64
+		n     int64
 	)
 	parseFunc := func(p *int64) func(string) error {
 		return func(s string) error {
@@ -29,53 +29,77 @@ func main() {
 			return nil
 		}
 	}
+	flag.Func("start", "Chunk start `offset`", parseFunc(&start))
 	flag.Func("end", "Chunk end `offset`", parseFunc(&end))
-	flag.Func("len", "Chunk `length`", parseFunc(&lenf))
+	flag.Func("len", "Chunk `length`", parseFunc(&n))
 	flag.Usage = func() {
-		fmt.Printf(`Usage: %s [OPTIONS] FILENAME OFFSET
-where OPTIONS are:
-`, os.Args[0])
+		fmt.Fprint(os.Stderr, `Usage:
+
+  chunk [flags ...] filename
+
+where the flags are:
+`)
 		flag.PrintDefaults()
-		fmt.Println(`Exactly one of -end, -len must be given.
-Numbers may be written as 1000, 1e3, or 1kB.`)
+		fmt.Fprint(os.Stderr, `
+Numbers may be written as 1000, 1e3, or 1kB. The -start and -end flags
+may be negative (to indicate offsets relative to the end of the file).
+
+All flags are optional, but -end and -len are mutually exclusive.
+If -start is not given, it defaults to the beginning of the file.
+If -end and -len are not given, they default to the end of the file.
+`)
 	}
 	flag.Parse()
 
-	if flag.NArg() != 2 {
+	if end > 0 && n > 0 {
+		log.Fatal("-end and -len are mutually exclusive")
+	}
+	if start > 0 && end > 0 && end < start {
+		log.Fatal("-end cannot be before -start")
+	}
+	if n < 0 {
+		log.Fatalln("-len cannot be negative")
+	}
+
+	if flag.NArg() != 1 {
 		flag.Usage()
-		os.Exit(1)
+		os.Exit(2)
 	}
 	f, err := os.Open(flag.Arg(0))
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 	defer f.Close()
-	if err := parseFunc(&off)(flag.Arg(1)); err != nil {
-		log.Fatalf("Error with offset: %s\n", err)
-	}
 
-	switch {
-	case end == 0 && lenf == 0:
-		log.Fatal("One of -end, -len must be given")
-	case end != 0 && lenf != 0:
-		log.Fatal("Only one of -end, -len may be given")
-	case end < 0:
-		log.Fatal("-end cannot be negative")
-	case end < 0:
-		log.Fatal("-end cannot be negative")
-	case end > 0 && end <= off:
-		log.Fatal("-end must be greater than the offset")
+	stat, err := f.Stat()
+	if err != nil {
+		log.Fatal(err)
 	}
-
-	n := lenf
+	if start < 0 {
+		start += stat.Size()
+		if start < 0 {
+			log.Println("Start offset would be before beginning of file; setting start to 0")
+			start = 0
+		}
+	}
+	if end == 0 && n == 0 {
+		end = stat.Size()
+	}
+	if end < 0 {
+		end += stat.Size()
+		if end < 0 {
+			log.Println("End offset would be before beginning of file; setting end to 0")
+			end = 0
+		}
+	}
 	if n == 0 {
-		n = end - off
+		n = end - start
 	}
-	sr := io.NewSectionReader(f, int64(off), int64(n))
+
+	log.Printf("Selecting chunk of size %d starting at %d", n, start)
+	sr := io.NewSectionReader(f, start, n)
 	if _, err := io.Copy(os.Stdout, sr); err != nil {
-		fmt.Printf("Error while reading chunk: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("Error while reading chunk: %s", err)
 	}
 }
 
